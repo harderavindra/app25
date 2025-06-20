@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 
@@ -18,7 +19,8 @@ app.use(cors({
   credentials: true
 }));
 
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use(errorHandler);
 
 

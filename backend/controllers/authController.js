@@ -71,7 +71,7 @@ export const refresh = async (req, res, next) => {
       httpOnly: true,
       secure: true,
       sameSite: 'None',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 15 * 60 * 1000, //
     }).json({ message: 'Token refreshed' });
   } catch (err) {
     next(err);
