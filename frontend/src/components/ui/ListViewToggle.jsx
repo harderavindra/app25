@@ -1,7 +1,8 @@
 import React from 'react'
 import { FiGrid, FiList } from 'react-icons/fi'
 
-const ListViewToggle = () => {
+const ListViewToggle = ({}) => {
+  
   return (
     <div>
         <div className="flex items-center space-x-4">

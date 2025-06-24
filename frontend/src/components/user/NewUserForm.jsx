@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "../../utils/axios";
 import InputText from "../ui/InputText";
 import SelectDropdown from "../ui/SelectDropdown";
@@ -7,20 +7,39 @@ import TimerProgressCircle from "../ui/TimerProgressCircle";
 import { useAuth } from "../../context/AuthContext";
 import { FiX } from "react-icons/fi";
 import { roles, departments, regions, teams } from "../../utils/constants";
+import UserInitialsAvatar from "../ui/UserInitialsAvatar";
 
-const NewUserForm = ({ handleClose }) => {
+const NewUserForm = ({ isEdit = false, userData = {}, handleClose, onSuccess }) => {
   const { user } = useAuth();
+  const [confirmDeleteText, setConfirmDeleteText] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
+    firstName: userData?.firstName || "",
+    lastName: userData?.lastName || "",
+    email: userData?.email || "",
     password: "",
-    role: "",
-    department: "",
-    team: "",
-    region: "",
+    role: userData?.role || "user", // ✅ safe optional chaining
+    department: userData?.department || "",
+    team: userData?.team || "",
+    region: userData?.region || "",
   });
+
+  // Update form data when userData changes
+  useEffect(() => {
+    if (isEdit && userData) {
+      setFormData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        password: "",
+        role: userData.role || "user",
+        department: userData.department || "",
+        team: userData.team || "",
+        region: userData.region || "",
+      });
+    }
+  }, [isEdit, userData]);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -77,27 +96,23 @@ const NewUserForm = ({ handleClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setError("Please fix the errors before submitting.");
-      return;
-    }
-
     setLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      const res = await axios.post("/users", formData);
-      setSuccess(res.data.message || "User created successfully.");
-      setShowForm(false);
-      resetForm();
+      const url = isEdit ? `/users/${userData._id}` : "/users";
+      const method = isEdit ? axios.put : axios.post;
 
+      const res = await method(url, formData);
+      setSuccess(res.data.message || (isEdit ? "User updated." : "User created."));
+      setShowForm(false);
+      if (onSuccess) onSuccess();
       setTimeout(() => {
         setSuccess("");
         handleClose(); // parent close trigger
       }, 4000);
+
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong.");
     } finally {
@@ -105,16 +120,36 @@ const NewUserForm = ({ handleClose }) => {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/users/${userData._id}`);
+      setSuccess("User deleted successfully.");
+            setShowForm(false);
+
+            if (onSuccess) onSuccess();
+      setTimeout(() => {
+        setSuccess("");
+        handleClose(); // parent close trigger
+      }, 4000);
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || "Failed to delete user.");
+    }
+  };
+
   return (
-    <div>
+    <div className="max-h-[calc(100vh-120px)] overflow-y-auto w-full relative">
       {showForm && (
-        <>
-          <div className="flex justify-between bg-neutral-800 py-3 px-3 rounded-t-lg">
-            <h2 className="text-neutral-50 font-semibold">Create User</h2>
+        <div >
+
+          <div className="flex justify-between bg-neutral-800 py-3 px-3 rounded-t-lg   sticky top-0 z-10 left-0">
+            <h2 className="text-neutral-50 font-semibold ">
+              {isEdit ? "Edit User" : "Create New User"}
+            </h2>
             <button className="text-neutral-50" onClick={handleClose}><FiX /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="w-full p-5">
+            <UserInitialsAvatar user={{firstName:formData.firstName, lastName:formData.lastName}} size="md" className="mb-5 mx-auto"/>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
               <InputText label="First Name" name="firstName" value={formData.firstName} onChange={handleChange} onBlur={handleBlur} invalid={!!errors.firstName} disabled={loading} />
               <InputText label="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} onBlur={handleBlur} invalid={!!errors.lastName} disabled={loading} />
@@ -128,10 +163,12 @@ const NewUserForm = ({ handleClose }) => {
 
             <div className="flex gap-8 mt-5">
               <Button type="button" variant="outline" className="w-full" onClick={handleClose} disabled={loading}>Cancel</Button>
-              <Button type="submit" variant="secondary" className="w-full" loading={loading}>Create User</Button>
+              <Button type="submit" variant="secondary" className="w-full" loading={loading}>
+                {isEdit ? "Update User" : "Create User"}
+              </Button>
             </div>
           </form>
-        </>
+        </div>
       )}
 
       {success && (
@@ -145,6 +182,40 @@ const NewUserForm = ({ handleClose }) => {
         <div className="px-3 py-2 mx-5 mt-4 bg-pink-50 border border-red-400 rounded-md text-red-600 flex items-center gap-3">
           <p>{error}</p>
         </div>
+      )}
+      {showForm && isEdit && (
+        
+      <div className="m-4 bg-red-50 rounded-xl border pt-5 border-red-100 overflow-hidden ">
+        <div className="px-5">
+        <h3 className=" bg-red-100 border border-red-100/50 p-2 rounded-lg  text-red-600  text-sm ">
+          Danger Zone: Deleting this user is permanent.
+        </h3>
+        <p className="text-sm my-3">
+          To confirm deletion, type <span className="font-bold">{userData?.email}</span> below:
+        </p>
+        <InputText
+          type="text"
+          placeholder="Type email to confirm..."
+          value={confirmDeleteText}
+          onChange={(e) => {
+            setConfirmDeleteText(e.target.value);
+            setDeleteError("");
+          }}
+        />
+        {deleteError && (
+          <p className="text-sm text-red-600 mt-1">{deleteError}</p>
+        )}
+        </div>
+        <div className="bg-red-100 border-t border-red-200 p-2 mt-4 flex items-center justify-center ">
+        <Button
+          variant="danger"
+          disabled={confirmDeleteText !== userData?.email}
+          onClick={handleDelete}
+        >
+          Delete User
+        </Button>
+        </div>
+      </div>
       )}
     </div>
   );

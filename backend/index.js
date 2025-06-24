@@ -5,6 +5,9 @@ import cors from 'cors';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import masterRoutes from './routes/masterRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js' ;
+import collectionRoutes from './routes/collectionRoutes.js'
 import { errorHandler } from './middlewares/errorHandler.js';
 
 
@@ -21,6 +24,9 @@ app.use(cors({
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/masters', masterRoutes);
+app.use('/api/categories',categoryRoutes );
+app.use('/api/collections',collectionRoutes );
 app.use(errorHandler);
 
 

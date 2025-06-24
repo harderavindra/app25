@@ -17,7 +17,7 @@ const Header = () => {
       <nav className="hidden md:flex space-x-6 text-sm text-zinc-600 dark:text-zinc-300">
         <a href="/dashboard" className="hover:text-blue-600">Dashboard</a>
         <a href="/users" className="hover:text-blue-600">Users</a>
-        <a href="/settings" className="hover:text-blue-600">Settings</a>
+        <a href="/category" className="hover:text-blue-600">Category</a>
       </nav>
 
       <AvatarDropdown user={user} />

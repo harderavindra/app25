@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 
 // Create a new user (admin-only)
-export const createUser = async (req, res) => {
+export const createUser = async (req, res, next) => {
   try {
     const { firstName, lastName, email, password, role, department, team, region } = req.body;
 
@@ -37,16 +37,15 @@ export const createUser = async (req, res) => {
         name: `${user.firstName} ${user.lastName || ''}`.trim()
       }
     });
-  } catch (error) {
-    console.error('User creation error:', error.message);
-    return res.status(500).json({ message: 'Server error' });
+   } catch (err) {
+     next(err);
   }
 };
 
 
-export const getUsers = async (req, res) => {
+export const getUsers = async (req, res,next) => {
     try {
-        const { search, roles } = req.query;
+        const { search, roles, teams } = req.query;
         const filter = {};
 
         // Search: firstName, lastName, or email
@@ -64,11 +63,70 @@ export const getUsers = async (req, res) => {
             const roleArray = Array.isArray(roles) ? roles : [roles];
             filter.role = { $in: roleArray };
         }
+        if( teams ) {
+            const teamArray = Array.isArray(teams) ? teams : [teams];
+            filter.team = { $in: teamArray };
+        }
 
         const users = await User.find(filter).sort({ createdAt: -1 });
         res.json({ users });
-    } catch (err) {
-        console.error("Error fetching users:", err);
-        res.status(500).json({ message: "Server error" });
+     } catch (err) {
+     next(err);
+  }
+};
+
+export const updateUser = async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    firstName,
+    lastName,
+    email,
+    password, // optional
+    role,
+    department,
+    team,
+    region,
+  } = req.body;
+
+  try {
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Update fields
+    user.firstName = firstName || user.firstName;
+    user.lastName = lastName || user.lastName;
+    user.email = email || user.email;
+    user.role = role || user.role;
+    user.department = department || user.department;
+    user.team = team || user.team;
+    user.region = region || user.region;
+
+    // Optional: update password if provided
+    if (password && password.trim().length > 0) {
+      user.password = password; // make sure hashing is handled in pre-save hook
     }
+
+    await user.save();
+    res.status(200).json({ message: 'User updated successfully.', user });
+   } catch (err) {
+     next(err);
+  }
+};
+
+
+// Delete a user by ID
+export const deleteUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+
+    // Optional: check if user exists first
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+     next(err);
+  }
 };
